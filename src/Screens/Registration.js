@@ -39,7 +39,7 @@ export default class Registration extends Component {
           AsyncStorage.setItem('token', response.data.token);
           const resetAction = StackActions.reset({
             index: 0,
-            actions: [NavigationActions.navigate({routeName: 'Chat'})],
+            actions: [NavigationActions.navigate({routeName: 'MainApp'})],
           });
           this.props.navigation.dispatch(resetAction);
         } else {
