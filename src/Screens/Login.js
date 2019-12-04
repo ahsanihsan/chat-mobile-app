@@ -11,11 +11,14 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import {SCREEN_WIDTH} from '../Helper/Layout';
+import {SCREEN_WIDTH, Colors, SCREEN_HEIGHT} from '../Helper/Layout';
 import Axios from 'axios';
 import {NavigationActions, StackActions} from 'react-navigation';
 import AsyncStorage from '@react-native-community/async-storage';
-import {API_URL} from '../Helper/Api';
+import request, {API_URL} from '../Helper/Api';
+import jwt_decode from 'jwt-decode';
+import moment from 'moment';
+
 export default class Login extends Component {
   constructor(props) {
     super(props);
@@ -23,17 +26,47 @@ export default class Login extends Component {
       email: 'ahsan.ihsan@outlook.com',
       password: 'ahsan11343',
       isLoading: false,
+      isAppLoading: true,
     };
+  }
+
+  async componentDidMount() {
+    try {
+      const value = await AsyncStorage.getItem('token');
+      if (value) {
+        const decoded = jwt_decode(value);
+        const currentTime = moment() / 1000;
+        if (decoded.exp < currentTime) {
+          return this.setState({
+            isAppLoading: false,
+          });
+        }
+        const resetAction = StackActions.reset({
+          index: 0,
+          actions: [NavigationActions.navigate({routeName: 'MainApp'})],
+        });
+        this.props.navigation.dispatch(resetAction);
+      } else {
+        this.setState({
+          isAppLoading: false,
+        });
+      }
+    } catch (error) {
+      this.setState({
+        isAppLoading: false,
+      });
+    }
   }
 
   onSubmit = () => {
     const email = this.state.email;
     const password = this.state.password;
     this.setState({isLoading: true});
-    Axios.post(API_URL + '/login', {email, password})
+    request({method: 'POST', url: '/login', data: {email, password}})
       .then(response => {
         this.setState({isLoading: false});
-        AsyncStorage.setItem('token', response.data.token);
+        console.log(response);
+        AsyncStorage.setItem('token', response.token);
         const resetAction = StackActions.reset({
           index: 0,
           actions: [NavigationActions.navigate({routeName: 'MainApp'})],
@@ -42,58 +75,70 @@ export default class Login extends Component {
       })
       .catch(error => {
         this.setState({isLoading: false});
-        Alert.alert('Invalid Credentials', error.response.data.message);
+        Alert.alert('Invalid Credentials', error.message);
       });
   };
 
   render() {
-    return (
-      <ImageBackground
-        source={require('../Images/login.jpeg')}
-        style={{width: '100%', height: '100%'}}>
-        <View style={styles.container}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : null}>
-            <View style={styles.card}>
-              <Text style={styles.title}>Welcome to Hello Jee</Text>
-              <TextInput
-                style={styles.textField}
-                placeholder="Enter Email"
-                placeholderTextColor="grey"
-                keyboardType="email-address"
-                value={this.state.email}
-                onChangeText={email => this.setState({email})}
-                editable={!this.state.isLoading}
-                autoCapitalize="none"
-              />
-              <TextInput
-                autoCapitalize="none"
-                style={[styles.textField, {marginTop: 20}]}
-                placeholder="Enter Password"
-                placeholderTextColor="grey"
-                secureTextEntry
-                value={this.state.password}
-                onChangeText={password => this.setState({password})}
-                editable={!this.state.isLoading}
-              />
-              <TouchableOpacity
-                style={styles.buttonContainer}
-                disabled={this.state.isLoading}
-                onPress={() => this.onSubmit()}>
-                <Text style={styles.buttonText}>Login </Text>
-                {this.state.isLoading ? <ActivityIndicator /> : undefined}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.buttonContainer}
-                disabled={this.state.isLoading}
-                onPress={() => this.props.navigation.navigate('Registration')}>
-                <Text style={styles.buttonText}>Registration</Text>
-              </TouchableOpacity>
-            </View>
-          </KeyboardAvoidingView>
-        </View>
-      </ImageBackground>
-    );
+    if (this.state.isAppLoading) {
+      return (
+        <View
+          style={{
+            backgroundColor: Colors.primaryColor,
+            height: SCREEN_HEIGHT,
+            width: SCREEN_WIDTH,
+          }}></View>
+      );
+    } else
+      return (
+        <ImageBackground
+          source={require('../Images/login.jpeg')}
+          style={{width: '100%', height: '100%'}}>
+          <View style={styles.container}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : null}>
+              <View style={styles.card}>
+                <Text style={styles.title}>Welcome to Hello Jee</Text>
+                <TextInput
+                  style={styles.textField}
+                  placeholder="Enter Email"
+                  placeholderTextColor="grey"
+                  keyboardType="email-address"
+                  value={this.state.email}
+                  onChangeText={email => this.setState({email})}
+                  editable={!this.state.isLoading}
+                  autoCapitalize="none"
+                />
+                <TextInput
+                  autoCapitalize="none"
+                  style={[styles.textField, {marginTop: 20}]}
+                  placeholder="Enter Password"
+                  placeholderTextColor="grey"
+                  secureTextEntry
+                  value={this.state.password}
+                  onChangeText={password => this.setState({password})}
+                  editable={!this.state.isLoading}
+                />
+                <TouchableOpacity
+                  style={styles.buttonContainer}
+                  disabled={this.state.isLoading}
+                  onPress={() => this.onSubmit()}>
+                  <Text style={styles.buttonText}>Login </Text>
+                  {this.state.isLoading ? <ActivityIndicator /> : undefined}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.buttonContainer}
+                  disabled={this.state.isLoading}
+                  onPress={() =>
+                    this.props.navigation.navigate('Registration')
+                  }>
+                  <Text style={styles.buttonText}>Registration</Text>
+                </TouchableOpacity>
+              </View>
+            </KeyboardAvoidingView>
+          </View>
+        </ImageBackground>
+      );
   }
 }
 

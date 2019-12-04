@@ -15,7 +15,7 @@ import {SCREEN_WIDTH} from '../Helper/Layout';
 import Axios from 'axios';
 import {NavigationActions, StackActions} from 'react-navigation';
 import AsyncStorage from '@react-native-community/async-storage';
-import {API_URL} from '../Helper/Api';
+import request, {API_URL} from '../Helper/Api';
 export default class Registration extends Component {
   constructor(props) {
     super(props);
@@ -31,24 +31,23 @@ export default class Registration extends Component {
   onSubmit = () => {
     const {email, password, fullName} = this.state;
     this.setState({isLoading: true});
-    Axios.post(API_URL + '/register', {email, password, fullName})
+    request({
+      method: 'POST',
+      url: '/register',
+      data: {email, password, fullName},
+    })
       .then(response => {
         this.setState({isLoading: false});
-        console.log(response.data);
-        if (response.data && response.data.success) {
-          AsyncStorage.setItem('token', response.data.token);
-          const resetAction = StackActions.reset({
-            index: 0,
-            actions: [NavigationActions.navigate({routeName: 'MainApp'})],
-          });
-          this.props.navigation.dispatch(resetAction);
-        } else {
-          Alert.alert('Invalid', response.data.message);
-        }
+        AsyncStorage.setItem('token', response.token);
+        const resetAction = StackActions.reset({
+          index: 0,
+          actions: [NavigationActions.navigate({routeName: 'MainApp'})],
+        });
+        this.props.navigation.dispatch(resetAction);
       })
       .catch(error => {
         this.setState({isLoading: false});
-        Alert.alert('Invalid Credentials', error.response.data.message);
+        Alert.alert('Invalid Credentials', error.message);
       });
   };
 
